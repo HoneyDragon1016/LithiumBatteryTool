@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鋰電池全能配對工具 v4.0 (Web版)</title>
+    <meta name="description" content="鋰電池配對工具：批次匯入電芯規格，自動計算串並聯最佳分組，讓每串總容量誤差最小化。純前端運算，資料不外流。">
+    <title>鋰電池全能配對工具 v4.1 (Web版)</title>
     <style>
         :root {
             --bg: #0f172a;
@@ -83,7 +84,16 @@
             color: var(--text-dim);
         }
 
-        input[type="number"], textarea {
+        .field-pair {
+            display: flex;
+            gap: 16px;
+        }
+
+        .field-offset {
+            margin-left: 20px;
+        }
+
+        input[type="number"], textarea, select {
             background-color: #0b1120;
             border: 1px solid var(--border);
             border-radius: 4px;
@@ -93,13 +103,23 @@
             outline: none;
         }
 
-        input[type="number"]:focus, textarea:focus {
+        input[type="number"]:focus, textarea:focus, select:focus {
             border-color: var(--accent);
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        select option {
+            background-color: var(--panel);
+            color: var(--text);
         }
 
         .checkbox-group {
             display: flex;
-            gap: 20px;
+            flex-wrap: wrap;
+            gap: 10px 20px;
         }
 
         .checkbox-label {
@@ -136,6 +156,24 @@
             color: #fff;
         }
 
+        button.secondary {
+            background-color: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            padding: 9px 18px;
+            font-weight: 500;
+        }
+
+        button.secondary:hover {
+            background-color: #0b1120;
+            color: var(--text);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
         .status {
             font-size: 0.85rem;
             margin-top: 6px;
@@ -143,6 +181,26 @@
 
         .status.error { color: var(--danger); }
         .status.info { color: var(--accent); }
+        .status.success { color: var(--success); }
+
+        .hint {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .hint .count {
+            color: var(--accent);
+        }
+
+        .hint .count.ready {
+            color: var(--success);
+        }
+
+        .hint .mono {
+            color: var(--text);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
 
         /* 結果展示 */
         .summary-grid {
@@ -191,6 +249,7 @@
             background-color: #0b1120;
             color: var(--text-dim);
             font-weight: 600;
+            white-space: nowrap;
         }
 
         tr:hover {
@@ -207,6 +266,15 @@
             font-size: 0.75rem;
             font-family: ui-monospace, monospace;
         }
+
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .card { padding: 16px; }
+            .field, .field-pair { width: 100%; }
+            .field-pair .field { flex: 1; }
+            .field-offset { margin-left: 0; }
+            input[type="number"], select { width: 100% !important; }
+        }
     </style>
 </head>
 <body>
@@ -214,7 +282,7 @@
 <div class="container">
     <header>
         <h1>鋰電池全能配對工具</h1>
-        <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 4px;">純靜態計算引擎 • 支援貪婪退火平衡算法</p>
+        <p class="hint" style="margin-top: 4px;">純靜態計算引擎 • 支援貪婪退火平衡算法</p>
     </header>
 
     <!-- 步驟 1: 設定與欄位 -->
@@ -222,14 +290,58 @@
         <h2>1. 規格與數據格式</h2>
         <div class="row" style="margin-bottom: 16px;">
             <div class="field">
-                <label for="series">串聯數 (S)</label>
-                <input type="number" id="series" value="6" min="1" max="100" style="width: 100px;">
+                <label for="preset">常用配置</label>
+                <select id="preset" style="width: 170px;">
+                    <option value="">自訂 (Custom)</option>
+                    <optgroup label="1S - 3S｜單節 / 小型">
+                        <option value="1x1">1S1P（1 顆）</option>
+                        <option value="2x1">2S1P（2 顆）</option>
+                        <option value="3x1">3S1P（3 顆）</option>
+                        <option value="3x2">3S2P（6 顆）</option>
+                    </optgroup>
+                    <optgroup label="4S - 6S｜工具機 / 動力">
+                        <option value="4x1">4S1P（4 顆）</option>
+                        <option value="4x2">4S2P（8 顆）</option>
+                        <option value="5x1">5S1P（5 顆）</option>
+                        <option value="5x2">5S2P（10 顆）</option>
+                        <option value="5x3">5S3P（15 顆）</option>
+                        <option value="6x1">6S1P（6 顆）</option>
+                        <option value="6x2">6S2P（12 顆）</option>
+                        <option value="6x3">6S3P（18 顆）</option>
+                        <option value="6x4">6S4P（24 顆）</option>
+                    </optgroup>
+                    <optgroup label="7S - 12S｜中壓電池組">
+                        <option value="7x1">7S1P（7 顆）</option>
+                        <option value="7x2">7S2P（14 顆）</option>
+                        <option value="8x1">8S1P（8 顆）</option>
+                        <option value="8x2">8S2P（16 顆）</option>
+                        <option value="9x2">9S2P（18 顆）</option>
+                        <option value="10x2">10S2P（20 顆）</option>
+                        <option value="10x3">10S3P（30 顆）</option>
+                        <option value="11x1">11S1P（11 顆）</option>
+                        <option value="11x2">11S2P（22 顆）</option>
+                        <option value="12x1">12S1P（12 顆）</option>
+                        <option value="12x2">12S2P（24 顆）</option>
+                    </optgroup>
+                    <optgroup label="13S 以上｜高壓電池組">
+                        <option value="13x1">13S1P（13 顆）</option>
+                        <option value="14x1">14S1P（14 顆）</option>
+                        <option value="16x1">16S1P（16 顆）</option>
+                        <option value="20x1">20S1P（20 顆）</option>
+                    </optgroup>
+                </select>
             </div>
-            <div class="field">
-                <label for="parallel">並聯數 (P)</label>
-                <input type="number" id="parallel" value="4" min="1" max="100" style="width: 100px;">
+            <div class="field-pair">
+                <div class="field">
+                    <label for="series">串聯數 (S)</label>
+                    <input type="number" id="series" value="6" min="1" max="100" style="width: 100px;">
+                </div>
+                <div class="field">
+                    <label for="parallel">並聯數 (P)</label>
+                    <input type="number" id="parallel" value="4" min="1" max="100" style="width: 100px;">
+                </div>
             </div>
-            <div class="field" style="margin-left: 20px;">
+            <div class="field field-offset">
                 <label>輸入欄位映射順序（勾選並依序排列）</label>
                 <div class="checkbox-group" style="margin-top: 8px;">
                     <label class="checkbox-label"><input type="checkbox" id="chk_mah" checked> 電容量 (mAh)</label>
@@ -243,12 +355,19 @@
     <!-- 步驟 2: 批次貼上資料 -->
     <div class="card">
         <h2>2. 批次輸入數據</h2>
-        <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px;">
-            每行代表一顆電芯。數值間可用空格或逗點隔開。目標筆數: <strong id="target_cells_count" style="color: var(--accent);">24</strong> 筆。
+        <p class="hint">
+            每行代表一顆電芯，欄位順序依上方勾選；<strong>換行 = 下一顆電芯</strong>。目標筆數: <strong id="target_cells_count" class="count">24</strong> 筆（已解析 <strong id="parsed_count" class="count">0</strong> 筆）
         </p>
         <textarea id="raw_data" placeholder="2500 9250 15&#10;2510 9280 14&#10;..."></textarea>
+        <div class="hint" style="margin-top: 8px;">
+            欄位分隔符號可任選或混用：<span class="mono">空白 , ; | : - / _ .</span>（全形 <span class="mono">，；：</span> 與 <span class="mono">– —</span> 亦可）<br>
+            <label class="checkbox-label" style="margin-top: 6px;"><input type="checkbox" id="chk_decimal"> 小數點保留為小數值（內阻可輸入 15.5 這類小數）</label>
+        </div>
         <div class="row" style="justify-content: space-between; margin-top: 12px;">
-            <button id="btn_run">開始運算配對</button>
+            <div class="btn-group">
+                <button id="btn_run">開始運算配對</button>
+                <button id="btn_clear" class="secondary">清空</button>
+            </div>
             <div id="status_msg" class="status"></div>
         </div>
     </div>
@@ -293,18 +412,112 @@
 </div>
 
 <script>
-    // 即時更新目標電芯數
-    const inS = document.getElementById('series');
-    const inP = document.getElementById('parallel');
-    const targetLabel = document.getElementById('target_cells_count');
-    
-    function updateTarget() {
-        const s = parseInt(inS.value, 10) || 0;
-        const p = parseInt(inP.value, 10) || 0;
-        targetLabel.innerText = (s * p).toString();
+    /* ==================================================================
+     * 核心計算模組 (純函式)
+     * 此區塊不操作 DOM, 方便單元測試與日後抽成獨立模組
+     * ================================================================== */
+
+    // 支援的欄位分隔符號 (空白另由 tokenizeLine 處理)
+    const SEPARATOR_CHARS = new Set([
+        ',', '，', '、',   // 逗號類
+        ';', '；',         // 分號類
+        '|', ':', '：',    // 豎線 / 冒號
+        '-', '–', '—',   // 連字號 / 破折號
+        '/', '\\', '_'   // 斜線 / 反斜線 / 底線
+    ]);
+
+    function isDigitChar(ch) {
+        return ch >= '0' && ch <= '9';
     }
-    inS.addEventListener('input', updateTarget);
-    inP.addEventListener('input', updateTarget);
+
+    // 將單行文字切分為數值 token
+    // 換行代表新的一顆電芯 (由 parseCells 以 split('\n') 處理)
+    // allowDecimal = true  -> '.' 視為小數點 (例如 15.5)
+    // allowDecimal = false -> '.' 視為分隔符號
+    function tokenizeLine(line, allowDecimal) {
+        const tokens = [];
+        let current = '';
+
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+
+            if (/\s/.test(ch) || SEPARATOR_CHARS.has(ch)) {
+                if (current) {
+                    tokens.push(current);
+                    current = '';
+                }
+                continue;
+            }
+
+            if (ch === '.') {
+                if (allowDecimal) {
+                    const prev = line[i - 1];
+                    const next = line[i + 1];
+                    // 前後皆為數字 (15.5) 或省略整數位 (.5) 時視為小數點
+                    if (isDigitChar(next) || (isDigitChar(prev) && current !== '')) {
+                        current += ch;
+                        continue;
+                    }
+                }
+                // 其餘情況視為分隔符號
+                if (current) {
+                    tokens.push(current);
+                    current = '';
+                }
+                continue;
+            }
+
+            current += ch;
+        }
+
+        if (current) tokens.push(current);
+        return tokens;
+    }
+
+    // 轉換為數值, 無效時回傳 null
+    function toNumber(token) {
+        if (token === undefined || token === null || token === '') return null;
+        const value = Number(token);
+        return Number.isFinite(value) ? value : null;
+    }
+
+    // 解析整份貼上資料
+    // 回傳: { cells, warnings, totalLines }
+    function parseCells(rawText, options) {
+        const { useMah, useMwh, useRes, allowDecimal, requiredCount } = options;
+
+        const targets = [];
+        if (useMah) targets.push('mah');
+        if (useMwh) targets.push('mwh');
+        if (useRes) targets.push('res');
+
+        const cells = [];
+        const warnings = [];
+        let totalLines = 0;
+        let idCounter = 1;
+
+        const lines = rawText.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            const tokens = tokenizeLine(lines[i], allowDecimal);
+            if (tokens.length === 0) continue;      // 空白行自動略過
+
+            totalLines++;
+            if (cells.length >= requiredCount) continue;   // 數量足夠後, 多餘資料直接忽略
+
+            const cell = { id: idCounter++, mah: 0, mwh: 0, res: 0 };
+            targets.forEach((key, idx) => {
+                const value = toNumber(tokens[idx]);
+                if (value === null) {
+                    warnings.push(`第 ${i + 1} 行「${key}」不是有效數值 (${tokens[idx] === undefined ? '缺漏' : tokens[idx]})`);
+                    return;
+                }
+                cell[key] = value;
+            });
+            cells.push(cell);
+        }
+
+        return { cells, warnings, totalLines };
+    }
 
     // 計算並聯內阻: 1/R = 1/r1 + 1/r2 ...
     function calcParallelResistance(cells) {
@@ -333,180 +546,282 @@
         }
     }
 
-    // 執行配對運算
-    document.getElementById('btn_run').addEventListener('click', () => {
-        const S = parseInt(inS.value, 10);
-        const P = parseInt(inP.value, 10);
-        const useMah = document.getElementById('chk_mah').checked;
-        const useMwh = document.getElementById('chk_mwh').checked;
-        const useRes = document.getElementById('chk_res').checked;
-        const statusMsg = document.getElementById('status_msg');
-        const rawText = document.getElementById('raw_data').value.trim();
+    // 蛇形分配 (Snake-fill), 確保每串拿到 P 顆
+    function snakeFill(cells, series, parallel) {
+        const groups = Array.from({ length: series }, () => ({ cells: [] }));
+        for (let i = 0; i < series * parallel; i++) {
+            let row = Math.floor(i / series);
+            let col = (row % 2 === 0) ? (i % series) : (series - 1 - (i % series));
+            groups[col].cells.push(cells[i]);
+        }
+        return groups;
+    }
 
-        if (!useMah && !useMwh && !useRes) {
-            statusMsg.className = "status error";
-            statusMsg.innerText = "錯誤：至少勾選一個數據欄位。";
-            return;
+    // 局部交換優化: 每次取「最大串」與「最小串」交換一顆, 縮小兩串容量差
+    function optimizeBalancing(groups, maxIterations, useRes) {
+        let iterations = maxIterations;
+        let improved = true;
+
+        while (improved && iterations > 0) {
+            improved = false;
+            iterations--;
+
+            let minIdx = 0, maxIdx = 0;
+            let minVal = groups[0].sumCapacity;
+            let maxVal = groups[0].sumCapacity;
+
+            for (let i = 1; i < groups.length; i++) {
+                if (groups[i].sumCapacity < minVal) { minVal = groups[i].sumCapacity; minIdx = i; }
+                if (groups[i].sumCapacity > maxVal) { maxVal = groups[i].sumCapacity; maxIdx = i; }
+            }
+
+            let currentDiff = maxVal - minVal;
+            if (currentDiff === 0) break;
+
+            let bestI = -1, bestJ = -1;
+            let bestDiff = currentDiff;
+
+            for (let i = 0; i < groups[0].cells.length; i++) {
+                for (let j = 0; j < groups[0].cells.length; j++) {
+                    let vMax = groups[maxIdx].cells[i].mah;
+                    let vMin = groups[minIdx].cells[j].mah;
+
+                    if (vMax > vMin) {
+                        let newMax = groups[maxIdx].sumCapacity - vMax + vMin;
+                        let newMin = groups[minIdx].sumCapacity - vMin + vMax;
+                        let newDiff = Math.abs(newMax - newMin);
+
+                        if (newDiff < currentDiff && newDiff < bestDiff) {
+                            bestDiff = newDiff;
+                            bestI = i;
+                            bestJ = j;
+                        }
+                    }
+                }
+            }
+
+            if (bestI !== -1) {
+                let temp = groups[maxIdx].cells[bestI];
+                groups[maxIdx].cells[bestI] = groups[minIdx].cells[bestJ];
+                groups[minIdx].cells[bestJ] = temp;
+                updateGroupStats(groups, useRes);
+                improved = true;
+            }
+        }
+    }
+
+    // 彙整電池組統計
+    function summarize(groups) {
+        let totalEnergy = 0;
+        let totalResistance = 0;
+        let minCapacity = Infinity;
+        let maxCapacity = -Infinity;
+
+        for (let g of groups) {
+            if (g.sumCapacity < minCapacity) minCapacity = g.sumCapacity;
+            if (g.sumCapacity > maxCapacity) maxCapacity = g.sumCapacity;
+            totalEnergy += g.sumEnergy;
+            totalResistance += g.parallelRes;
         }
 
-        const requiredCount = S * P;
-        if (requiredCount <= 0) {
-            statusMsg.className = "status error";
-            statusMsg.innerText = "錯誤：S 與 P 必須大於 0。";
-            return;
-        }
+        return {
+            minCapacity: minCapacity,
+            maxCapacity: maxCapacity,
+            maxDiff: maxCapacity - minCapacity,
+            totalEnergy: totalEnergy,
+            totalResistance: totalResistance
+        };
+    }
 
-        // 解析輸入文本
-        const lines = rawText.split('\n');
-        const allCells = [];
-        let idCounter = 1;
+    // 執行完整配對運算 (純函式, 不碰 DOM)
+    function runPairing(config) {
+        const { series, parallel, useMah, useMwh, useRes, maxIterations, cells } = config;
+        const requiredCount = series * parallel;
+        const pool = cells.slice(0, requiredCount);
 
-        for (let line of lines) {
-            let trimmed = line.trim();
-            if (!trimmed) continue;
-            // 以逗點或空白分割
-            let tokens = trimmed.split(/[\s,]+/).filter(t => t.length > 0);
-            if (tokens.length === 0) continue;
-
-            let tokenIdx = 0;
-            let mah = 0, mwh = 0, res = 0;
-
-            if (useMah && tokenIdx < tokens.length) mah = parseInt(tokens[tokenIdx++], 10) || 0;
-            if (useMwh && tokenIdx < tokens.length) mwh = parseInt(tokens[tokenIdx++], 10) || 0;
-            if (useRes && tokenIdx < tokens.length) res = parseFloat(tokens[tokenIdx++]) || 0;
-
-            allCells.push({ id: idCounter++, mah, mwh, res });
-            if (allCells.length === requiredCount) break;
-        }
-
-        if (allCells.length < requiredCount) {
-            statusMsg.className = "status error";
-            statusMsg.innerText = `資料不足：需要 ${requiredCount} 筆，僅解析出 ${allCells.length} 筆。`;
-            return;
-        }
-
-        statusMsg.className = "status info";
-        statusMsg.innerText = "正在執行退火優化配對...";
-
-        // 排序：預設以容量優先，無容量則依能量
-        allCells.sort((a, b) => {
+        // 排序: 預設以容量優先, 無容量則依能量
+        pool.sort((a, b) => {
             if (useMah) return b.mah - a.mah;
             if (useMwh) return b.mwh - a.mwh;
             return 0;
         });
 
-        // 初始化分組
-        const groups = Array.from({ length: S }, () => ({ cells: [] }));
-
-        // 蛇形分配 (Snake-fill)
-        for (let i = 0; i < requiredCount; i++) {
-            let row = Math.floor(i / S);
-            let col = (row % 2 === 0) ? (i % S) : (S - 1 - (i % S));
-            groups[col].cells.push(allCells[i]);
-        }
-
+        const groups = snakeFill(pool, series, parallel);
         updateGroupStats(groups, useRes);
+        if (useMah) optimizeBalancing(groups, maxIterations, useRes);
 
-        // 局部交換優化 (Local Search / Greedy Optimization)
-        if (useMah) {
-            let iterations = 30000;
-            let improved = true;
+        return { groups: groups, stats: summarize(groups) };
+    }
 
-            while (improved && iterations > 0) {
-                improved = false;
-                iterations--;
+    /* ==================================================================
+     * UI 層 (DOM 事件與渲染)
+     * ================================================================== */
 
-                let minIdx = 0, maxIdx = 0;
-                let minVal = groups[0].sumCapacity;
-                let maxVal = groups[0].sumCapacity;
+    const inS = document.getElementById('series');
+    const inP = document.getElementById('parallel');
+    const presetEl = document.getElementById('preset');
+    const rawDataEl = document.getElementById('raw_data');
+    const decimalEl = document.getElementById('chk_decimal');
+    const targetLabel = document.getElementById('target_cells_count');
+    const parsedLabel = document.getElementById('parsed_count');
+    const statusMsg = document.getElementById('status_msg');
+    const MAX_ITERATIONS = 30000;
 
-                for (let i = 1; i < S; i++) {
-                    if (groups[i].sumCapacity < minVal) { minVal = groups[i].sumCapacity; minIdx = i; }
-                    if (groups[i].sumCapacity > maxVal) { maxVal = groups[i].sumCapacity; maxIdx = i; }
-                }
+    function getSeries() {
+        return parseInt(inS.value, 10) || 0;
+    }
 
-                let currentDiff = maxVal - minVal;
-                if (currentDiff === 0) break;
+    function getParallel() {
+        return parseInt(inP.value, 10) || 0;
+    }
 
-                let bestI = -1, bestJ = -1;
-                let bestDiff = currentDiff;
-
-                for (let i = 0; i < P; i++) {
-                    for (let j = 0; j < P; j++) {
-                        let vMax = groups[maxIdx].cells[i].mah;
-                        let vMin = groups[minIdx].cells[j].mah;
-
-                        if (vMax > vMin) {
-                            let newMax = groups[maxIdx].sumCapacity - vMax + vMin;
-                            let newMin = groups[minIdx].sumCapacity - vMin + vMax;
-                            let newDiff = Math.abs(newMax - newMin);
-
-                            if (newDiff < currentDiff && newDiff < bestDiff) {
-                                bestDiff = newDiff;
-                                bestI = i;
-                                bestJ = j;
-                            }
-                        }
-                    }
-                }
-
-                if (bestI !== -1) {
-                    let temp = groups[maxIdx].cells[bestI];
-                    groups[maxIdx].cells[bestI] = groups[minIdx].cells[bestJ];
-                    groups[minIdx].cells[bestJ] = temp;
-                    updateGroupStats(groups, useRes);
-                    improved = true;
-                }
-            }
+    // 統計可輸入的有效行數 (不含空白行)
+    function countParsedLines(rawText, allowDecimal) {
+        let count = 0;
+        for (let line of rawText.split('\n')) {
+            if (tokenizeLine(line, allowDecimal).length > 0) count++;
         }
+        return count;
+    }
 
-        // 渲染統計報表
-        let totalPackEnergy = 0;
-        let totalPackResistance = 0;
-        let minGroupCap = Infinity;
-        let maxGroupCap = -Infinity;
+    // 即時更新目標電芯數、下拉選單與已解析筆數
+    function updateTarget() {
+        const requiredCount = getSeries() * getParallel();
+        targetLabel.innerText = requiredCount.toString();
 
-        for (let g of groups) {
-            if (g.sumCapacity < minGroupCap) minGroupCap = g.sumCapacity;
-            if (g.sumCapacity > maxGroupCap) maxGroupCap = g.sumCapacity;
-            totalPackEnergy += g.sumEnergy;
-            totalPackResistance += g.parallelRes;
-        }
+        // 手動輸入的 S/P 若對應到某個預設, 則同步顯示於下拉選單
+        const value = `${getSeries()}x${getParallel()}`;
+        const matched = Array.prototype.some.call(presetEl.options, o => o.value === value);
+        presetEl.value = matched ? value : '';
 
-        document.getElementById('res_pack_cap').innerText = useMah ? `${(minGroupCap / 1000).toFixed(3)} Ah` : 'N/A';
-        document.getElementById('res_pack_energy').innerText = useMwh ? `${(totalPackEnergy / 1000).toFixed(2)} Wh` : 'N/A';
-        document.getElementById('res_pack_res').innerText = useRes ? `${totalPackResistance.toFixed(2)} mΩ` : 'N/A';
-        document.getElementById('res_pack_diff').innerText = useMah ? `${maxGroupCap - minGroupCap} mAh` : 'N/A';
+        const parsed = countParsedLines(rawDataEl.value, decimalEl.checked);
+        parsedLabel.innerText = parsed.toString();
+        parsedLabel.className = (requiredCount > 0 && parsed >= requiredCount) ? 'count ready' : 'count';
+    }
+
+    inS.addEventListener('input', updateTarget);
+    inP.addEventListener('input', updateTarget);
+
+    // 下拉選單快速套用 S/P 設定
+    presetEl.addEventListener('change', () => {
+        if (!presetEl.value) return;
+        const parts = presetEl.value.split('x');
+        inS.value = parts[0];
+        inP.value = parts[1];
+        updateTarget();
+    });
+
+    rawDataEl.addEventListener('input', updateTarget);
+    decimalEl.addEventListener('change', updateTarget);
+
+    // 設定狀態訊息
+    function setStatus(text, type) {
+        statusMsg.className = type ? `status ${type}` : 'status';
+        statusMsg.innerText = text;
+    }
+
+    // 渲染統計報表
+    function renderReport(groups, stats, useMah, useMwh, useRes) {
+        document.getElementById('res_pack_cap').innerText = useMah ? `${(stats.minCapacity / 1000).toFixed(3)} Ah` : 'N/A';
+        document.getElementById('res_pack_energy').innerText = useMwh ? `${(stats.totalEnergy / 1000).toFixed(2)} Wh` : 'N/A';
+        document.getElementById('res_pack_res').innerText = useRes ? `${stats.totalResistance.toFixed(2)} mΩ` : 'N/A';
+        document.getElementById('res_pack_diff').innerText = useMah ? `${stats.maxDiff} mAh` : 'N/A';
 
         const tbody = document.getElementById('result_tbody');
         tbody.innerHTML = '';
 
         groups.forEach((g, idx) => {
             const tr = document.createElement('tr');
-            
+
             let cellListHtml = g.cells.map(c => {
-                let text = `#${c.id}(`;
                 let parts = [];
                 if (useMah) parts.push(`${c.mah}`);
                 if (useMwh) parts.push(`${c.mwh}`);
                 if (useRes) parts.push(`${c.res}`);
-                text += parts.join('|') + ')';
-                return `<span class="cell-tag">${text}</span>`;
+                return `<span class="cell-tag">#${c.id}(${parts.join('|')})</span>`;
             }).join('');
 
             tr.innerHTML = `
                 <td><strong>S${String(idx + 1).padStart(2, '0')}</strong></td>
-                <td>${g.sumCapacity}</td>
-                <td>${g.sumEnergy}</td>
-                <td>${g.parallelRes.toFixed(2)}</td>
+                <td>${useMah ? g.sumCapacity : '—'}</td>
+                <td>${useMwh ? g.sumEnergy : '—'}</td>
+                <td>${useRes ? g.parallelRes.toFixed(2) : '—'}</td>
                 <td>${cellListHtml}</td>
             `;
             tbody.appendChild(tr);
         });
 
         document.getElementById('result_panel').style.display = 'block';
-        statusMsg.className = "status";
-        statusMsg.innerText = "計算完成。";
+    }
+
+    document.getElementById('btn_run').addEventListener('click', () => {
+        const S = getSeries();
+        const P = getParallel();
+        const useMah = document.getElementById('chk_mah').checked;
+        const useMwh = document.getElementById('chk_mwh').checked;
+        const useRes = document.getElementById('chk_res').checked;
+        const rawText = rawDataEl.value.trim();
+
+        if (!useMah && !useMwh && !useRes) {
+            setStatus('錯誤：至少勾選一個數據欄位。', 'error');
+            return;
+        }
+
+        const requiredCount = S * P;
+        if (requiredCount <= 0) {
+            setStatus('錯誤：S 與 P 必須大於 0。', 'error');
+            return;
+        }
+
+        if (rawText.length === 0) {
+            setStatus('錯誤：請先貼上電芯資料。', 'error');
+            return;
+        }
+
+        const parsed = parseCells(rawText, {
+            useMah: useMah,
+            useMwh: useMwh,
+            useRes: useRes,
+            allowDecimal: decimalEl.checked,
+            requiredCount: requiredCount
+        });
+
+        if (parsed.cells.length < requiredCount) {
+            setStatus(`資料不足：需要 ${requiredCount} 筆，僅解析出 ${parsed.cells.length} 筆。`, 'error');
+            return;
+        }
+
+        setStatus('正在執行退火優化配對...', 'info');
+
+        // 延後一個事件迴圈, 讓狀態訊息先完成繪製再進行運算
+        setTimeout(() => {
+            const result = runPairing({
+                series: S,
+                parallel: P,
+                useMah: useMah,
+                useMwh: useMwh,
+                useRes: useRes,
+                maxIterations: MAX_ITERATIONS,
+                cells: parsed.cells
+            });
+
+            renderReport(result.groups, result.stats, useMah, useMwh, useRes);
+
+            const notes = [];
+            const extraLines = parsed.totalLines - parsed.cells.length;
+            if (extraLines > 0) notes.push(`已忽略 ${extraLines} 筆多餘資料`);
+            if (parsed.warnings.length > 0) {
+                notes.push(`${parsed.warnings.length} 個欄位非數值已以 0 代入（${parsed.warnings.slice(0, 2).join('、')}）`);
+            }
+            setStatus(notes.length > 0 ? `計算完成。${notes.join('；')}` : '計算完成。', 'success');
+        }, 0);
+    });
+
+    document.getElementById('btn_clear').addEventListener('click', () => {
+        rawDataEl.value = '';
+        document.getElementById('result_panel').style.display = 'none';
+        setStatus('');
+        updateTarget();
     });
 
     updateTarget();
