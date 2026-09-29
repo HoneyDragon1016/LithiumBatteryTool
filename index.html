@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鋰電池全能配對工具 v4.0 (Web版)</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --border: #334155;
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .card {
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 14px;
+            color: var(--text);
+            border-left: 3px solid var(--accent);
+            padding-left: 8px;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        input[type="number"], textarea {
+            background-color: #0b1120;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            padding: 8px 12px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        input[type="number"]:focus, textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        textarea {
+            width: 100%;
+            height: 160px;
+            resize: vertical;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            line-height: 1.4;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #082f49;
+            font-weight: 600;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 24px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.15s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+            color: #fff;
+        }
+
+        .status {
+            font-size: 0.85rem;
+            margin-top: 6px;
+        }
+
+        .status.error { color: var(--danger); }
+        .status.info { color: var(--accent); }
+
+        /* 結果展示 */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .summary-box {
+            background-color: #0b1120;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .summary-box .title {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+
+        .summary-box .value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #0b1120;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .cell-tag {
+            display: inline-block;
+            background: #0b1120;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 2px 6px;
+            margin: 2px;
+            font-size: 0.75rem;
+            font-family: ui-monospace, monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>鋰電池全能配對工具</h1>
+        <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 4px;">純靜態計算引擎 • 支援貪婪退火平衡算法</p>
+    </header>
+
+    <!-- 步驟 1: 設定與欄位 -->
+    <div class="card">
+        <h2>1. 規格與數據格式</h2>
+        <div class="row" style="margin-bottom: 16px;">
+            <div class="field">
+                <label for="series">串聯數 (S)</label>
+                <input type="number" id="series" value="6" min="1" max="100" style="width: 100px;">
+            </div>
+            <div class="field">
+                <label for="parallel">並聯數 (P)</label>
+                <input type="number" id="parallel" value="4" min="1" max="100" style="width: 100px;">
+            </div>
+            <div class="field" style="margin-left: 20px;">
+                <label>輸入欄位映射順序（勾選並依序排列）</label>
+                <div class="checkbox-group" style="margin-top: 8px;">
+                    <label class="checkbox-label"><input type="checkbox" id="chk_mah" checked> 電容量 (mAh)</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk_mwh"> 電能量 (mWh)</label>
+                    <label class="checkbox-label"><input type="checkbox" id="chk_res"> 內電阻 (mΩ)</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 步驟 2: 批次貼上資料 -->
+    <div class="card">
+        <h2>2. 批次輸入數據</h2>
+        <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 8px;">
+            每行代表一顆電芯。數值間可用空格或逗點隔開。目標筆數: <strong id="target_cells_count" style="color: var(--accent);">24</strong> 筆。
+        </p>
+        <textarea id="raw_data" placeholder="2500 9250 15&#10;2510 9280 14&#10;..."></textarea>
+        <div class="row" style="justify-content: space-between; margin-top: 12px;">
+            <button id="btn_run">開始運算配對</button>
+            <div id="status_msg" class="status"></div>
+        </div>
+    </div>
+
+    <!-- 步驟 3: 報表輸出 -->
+    <div class="card" id="result_panel" style="display: none;">
+        <h2>3. 配對成果與統計</h2>
+        <div class="summary-grid">
+            <div class="summary-box">
+                <div class="title">可用總容量 (受限最小串)</div>
+                <div class="value" id="res_pack_cap">-</div>
+            </div>
+            <div class="summary-box">
+                <div class="title">電池組總能量</div>
+                <div class="value" id="res_pack_energy">-</div>
+            </div>
+            <div class="summary-box">
+                <div class="title">估算總等效內阻</div>
+                <div class="value" id="res_pack_res">-</div>
+            </div>
+            <div class="summary-box">
+                <div class="title">最大串容量偏差 (Max Diff)</div>
+                <div class="value" id="res_pack_diff">-</div>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">組別</th>
+                        <th>總容量 (mAh)</th>
+                        <th>總能量 (mWh)</th>
+                        <th>並聯內阻 (mΩ)</th>
+                        <th>配置電芯清單 (#ID:數值)</th>
+                    </tr>
+                </thead>
+                <tbody id="result_tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 即時更新目標電芯數
+    const inS = document.getElementById('series');
+    const inP = document.getElementById('parallel');
+    const targetLabel = document.getElementById('target_cells_count');
+    
+    function updateTarget() {
+        const s = parseInt(inS.value, 10) || 0;
+        const p = parseInt(inP.value, 10) || 0;
+        targetLabel.innerText = (s * p).toString();
+    }
+    inS.addEventListener('input', updateTarget);
+    inP.addEventListener('input', updateTarget);
+
+    // 計算並聯內阻: 1/R = 1/r1 + 1/r2 ...
+    function calcParallelResistance(cells) {
+        let inverseSum = 0.0;
+        let validCount = 0;
+        for (let c of cells) {
+            if (c.res > 0) {
+                inverseSum += 1.0 / c.res;
+                validCount++;
+            }
+        }
+        if (validCount === 0 || inverseSum === 0.0) return 0.0;
+        return 1.0 / inverseSum;
+    }
+
+    // 更新群組統計
+    function updateGroupStats(groups, useRes) {
+        for (let g of groups) {
+            g.sumCapacity = 0;
+            g.sumEnergy = 0;
+            for (let c of g.cells) {
+                g.sumCapacity += c.mah;
+                g.sumEnergy += c.mwh;
+            }
+            g.parallelRes = useRes ? calcParallelResistance(g.cells) : 0.0;
+        }
+    }
+
+    // 執行配對運算
+    document.getElementById('btn_run').addEventListener('click', () => {
+        const S = parseInt(inS.value, 10);
+        const P = parseInt(inP.value, 10);
+        const useMah = document.getElementById('chk_mah').checked;
+        const useMwh = document.getElementById('chk_mwh').checked;
+        const useRes = document.getElementById('chk_res').checked;
+        const statusMsg = document.getElementById('status_msg');
+        const rawText = document.getElementById('raw_data').value.trim();
+
+        if (!useMah && !useMwh && !useRes) {
+            statusMsg.className = "status error";
+            statusMsg.innerText = "錯誤：至少勾選一個數據欄位。";
+            return;
+        }
+
+        const requiredCount = S * P;
+        if (requiredCount <= 0) {
+            statusMsg.className = "status error";
+            statusMsg.innerText = "錯誤：S 與 P 必須大於 0。";
+            return;
+        }
+
+        // 解析輸入文本
+        const lines = rawText.split('\n');
+        const allCells = [];
+        let idCounter = 1;
+
+        for (let line of lines) {
+            let trimmed = line.trim();
+            if (!trimmed) continue;
+            // 以逗點或空白分割
+            let tokens = trimmed.split(/[\s,]+/).filter(t => t.length > 0);
+            if (tokens.length === 0) continue;
+
+            let tokenIdx = 0;
+            let mah = 0, mwh = 0, res = 0;
+
+            if (useMah && tokenIdx < tokens.length) mah = parseInt(tokens[tokenIdx++], 10) || 0;
+            if (useMwh && tokenIdx < tokens.length) mwh = parseInt(tokens[tokenIdx++], 10) || 0;
+            if (useRes && tokenIdx < tokens.length) res = parseFloat(tokens[tokenIdx++]) || 0;
+
+            allCells.push({ id: idCounter++, mah, mwh, res });
+            if (allCells.length === requiredCount) break;
+        }
+
+        if (allCells.length < requiredCount) {
+            statusMsg.className = "status error";
+            statusMsg.innerText = `資料不足：需要 ${requiredCount} 筆，僅解析出 ${allCells.length} 筆。`;
+            return;
+        }
+
+        statusMsg.className = "status info";
+        statusMsg.innerText = "正在執行退火優化配對...";
+
+        // 排序：預設以容量優先，無容量則依能量
+        allCells.sort((a, b) => {
+            if (useMah) return b.mah - a.mah;
+            if (useMwh) return b.mwh - a.mwh;
+            return 0;
+        });
+
+        // 初始化分組
+        const groups = Array.from({ length: S }, () => ({ cells: [] }));
+
+        // 蛇形分配 (Snake-fill)
+        for (let i = 0; i < requiredCount; i++) {
+            let row = Math.floor(i / S);
+            let col = (row % 2 === 0) ? (i % S) : (S - 1 - (i % S));
+            groups[col].cells.push(allCells[i]);
+        }
+
+        updateGroupStats(groups, useRes);
+
+        // 局部交換優化 (Local Search / Greedy Optimization)
+        if (useMah) {
+            let iterations = 30000;
+            let improved = true;
+
+            while (improved && iterations > 0) {
+                improved = false;
+                iterations--;
+
+                let minIdx = 0, maxIdx = 0;
+                let minVal = groups[0].sumCapacity;
+                let maxVal = groups[0].sumCapacity;
+
+                for (let i = 1; i < S; i++) {
+                    if (groups[i].sumCapacity < minVal) { minVal = groups[i].sumCapacity; minIdx = i; }
+                    if (groups[i].sumCapacity > maxVal) { maxVal = groups[i].sumCapacity; maxIdx = i; }
+                }
+
+                let currentDiff = maxVal - minVal;
+                if (currentDiff === 0) break;
+
+                let bestI = -1, bestJ = -1;
+                let bestDiff = currentDiff;
+
+                for (let i = 0; i < P; i++) {
+                    for (let j = 0; j < P; j++) {
+                        let vMax = groups[maxIdx].cells[i].mah;
+                        let vMin = groups[minIdx].cells[j].mah;
+
+                        if (vMax > vMin) {
+                            let newMax = groups[maxIdx].sumCapacity - vMax + vMin;
+                            let newMin = groups[minIdx].sumCapacity - vMin + vMax;
+                            let newDiff = Math.abs(newMax - newMin);
+
+                            if (newDiff < currentDiff && newDiff < bestDiff) {
+                                bestDiff = newDiff;
+                                bestI = i;
+                                bestJ = j;
+                            }
+                        }
+                    }
+                }
+
+                if (bestI !== -1) {
+                    let temp = groups[maxIdx].cells[bestI];
+                    groups[maxIdx].cells[bestI] = groups[minIdx].cells[bestJ];
+                    groups[minIdx].cells[bestJ] = temp;
+                    updateGroupStats(groups, useRes);
+                    improved = true;
+                }
+            }
+        }
+
+        // 渲染統計報表
+        let totalPackEnergy = 0;
+        let totalPackResistance = 0;
+        let minGroupCap = Infinity;
+        let maxGroupCap = -Infinity;
+
+        for (let g of groups) {
+            if (g.sumCapacity < minGroupCap) minGroupCap = g.sumCapacity;
+            if (g.sumCapacity > maxGroupCap) maxGroupCap = g.sumCapacity;
+            totalPackEnergy += g.sumEnergy;
+            totalPackResistance += g.parallelRes;
+        }
+
+        document.getElementById('res_pack_cap').innerText = useMah ? `${(minGroupCap / 1000).toFixed(3)} Ah` : 'N/A';
+        document.getElementById('res_pack_energy').innerText = useMwh ? `${(totalPackEnergy / 1000).toFixed(2)} Wh` : 'N/A';
+        document.getElementById('res_pack_res').innerText = useRes ? `${totalPackResistance.toFixed(2)} mΩ` : 'N/A';
+        document.getElementById('res_pack_diff').innerText = useMah ? `${maxGroupCap - minGroupCap} mAh` : 'N/A';
+
+        const tbody = document.getElementById('result_tbody');
+        tbody.innerHTML = '';
+
+        groups.forEach((g, idx) => {
+            const tr = document.createElement('tr');
+            
+            let cellListHtml = g.cells.map(c => {
+                let text = `#${c.id}(`;
+                let parts = [];
+                if (useMah) parts.push(`${c.mah}`);
+                if (useMwh) parts.push(`${c.mwh}`);
+                if (useRes) parts.push(`${c.res}`);
+                text += parts.join('|') + ')';
+                return `<span class="cell-tag">${text}</span>`;
+            }).join('');
+
+            tr.innerHTML = `
+                <td><strong>S${String(idx + 1).padStart(2, '0')}</strong></td>
+                <td>${g.sumCapacity}</td>
+                <td>${g.sumEnergy}</td>
+                <td>${g.parallelRes.toFixed(2)}</td>
+                <td>${cellListHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('result_panel').style.display = 'block';
+        statusMsg.className = "status";
+        statusMsg.innerText = "計算完成。";
+    });
+
+    updateTarget();
+</script>
+
+</body>
+</html>
