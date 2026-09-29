@@ -7,7 +7,7 @@
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
 ![Cloudflare Pages](https://img.shields.io/badge/Cloudflare%20Pages-deployed-orange?logo=cloudflare&logoColor=white)
-![License](https://img.shields.io/badge/license-see%20LICENSE-lightgrey)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://github.com/HoneyDragon1016/LithiumBatteryTool/blob/main/LICENSE)
 
 ---
 
@@ -259,3 +259,8 @@ LithiumBatteryTool/
 - [ ] 支援 LiFePO4 等化學系統的電壓標註
 - [ ] 依「能量」或「內阻」為主目標進行最佳化
 - [ ] 線上 Demo 連結
+
+## 授權
+
+本專案採用 [MIT License](.../blob/main/LICENSE) 授權。
+© 2026 HoneyDragon1016
