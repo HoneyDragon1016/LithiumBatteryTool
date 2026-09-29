@@ -264,5 +264,5 @@ LithiumBatteryTool/
 
 ## 授權
 
-本專案採用 [MIT License](.../blob/main/LICENSE) 授權。
+本專案採用 [MIT License](https://github.com/HoneyDragon1016/LithiumBatteryTool/blob/main/LICENSE) 授權。
 © 2026 HoneyDragon1016
