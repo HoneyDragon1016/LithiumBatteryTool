@@ -1,5 +1,5 @@
 # 鋰電池全能配對工具 · LithiumBatteryTool
-
+## [官方網頁版](https://bat.gohc.uk) [https://bat.gohc.uk](https://bat.gohc.uk)
 > 批次匯入電芯規格，自動完成**串聯／並聯最佳分組**，讓每一串的總容量誤差降到最低。
 > 純前端單頁工具，所有運算都在瀏覽器本機完成，資料不會上傳到任何伺服器。
 
