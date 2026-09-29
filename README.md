@@ -195,7 +195,9 @@ S=4, P=3
 ```text
 LithiumBatteryTool/
 ├── index.html      # 單一檔案：HTML 結構 + CSS 樣式 + 演算法 + UI 邏輯
-└── README.md       # 專案說明文件
+├── README.md       # 專案說明文件
+└── LICENSE         # MIT 授權條款
+
 ```
 
 `index.html` 內部的 `<script>` 分為兩層，便於維護與測試：
