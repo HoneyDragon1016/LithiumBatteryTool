@@ -84,6 +84,15 @@
             color: var(--text-dim);
         }
 
+        .field-pair {
+            display: flex;
+            gap: 16px;
+        }
+
+        .field-offset {
+            margin-left: 20px;
+        }
+
         input[type="number"], textarea, select {
             background-color: #0b1120;
             border: 1px solid var(--border);
@@ -100,6 +109,11 @@
 
         select {
             cursor: pointer;
+        }
+
+        select option {
+            background-color: var(--panel);
+            color: var(--text);
         }
 
         .checkbox-group {
@@ -172,27 +186,21 @@
         .hint {
             font-size: 0.85rem;
             color: var(--text-dim);
-            line-height: 1.7;
+            line-height: 1.6;
         }
 
-        .hint code {
-            background-color: #0b1120;
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            padding: 1px 5px;
+        .hint .count {
             color: var(--accent);
+        }
+
+        .hint .count.ready {
+            color: var(--success);
+        }
+
+        .hint .mono {
+            color: var(--text);
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.8rem;
         }
-
-        .counter {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            white-space: nowrap;
-        }
-
-        .counter strong { color: var(--accent); }
-        .counter.ready strong { color: var(--success); }
 
         /* 結果展示 */
         .summary-grid {
@@ -262,8 +270,10 @@
         @media (max-width: 640px) {
             body { padding: 12px; }
             .card { padding: 16px; }
-            .field { width: 100%; }
-            input[type="number"] { width: 100% !important; }
+            .field, .field-pair { width: 100%; }
+            .field-pair .field { flex: 1; }
+            .field-offset { margin-left: 0; }
+            input[type="number"], select { width: 100% !important; }
         }
     </style>
 </head>
@@ -272,7 +282,7 @@
 <div class="container">
     <header>
         <h1>鋰電池全能配對工具</h1>
-        <p class="hint" style="margin-top: 4px;">純靜態計算引擎 • 支援貪婪退火平衡算法 • 所有運算皆在本機瀏覽器完成</p>
+        <p class="hint" style="margin-top: 4px;">純靜態計算引擎 • 支援貪婪退火平衡算法</p>
     </header>
 
     <!-- 步驟 1: 設定與欄位 -->
@@ -280,8 +290,8 @@
         <h2>1. 規格與數據格式</h2>
         <div class="row" style="margin-bottom: 16px;">
             <div class="field">
-                <label for="preset">常用配置 (快速選擇)</label>
-                <select id="preset" style="min-width: 210px;">
+                <label for="preset">常用配置</label>
+                <select id="preset" style="width: 170px;">
                     <option value="">自訂 (Custom)</option>
                     <optgroup label="1S - 3S｜單節 / 小型">
                         <option value="1x1">1S1P（1 顆）</option>
@@ -321,15 +331,17 @@
                     </optgroup>
                 </select>
             </div>
-            <div class="field">
-                <label for="series">串聯數 (S)</label>
-                <input type="number" id="series" value="6" min="1" max="100" style="width: 100px;">
+            <div class="field-pair">
+                <div class="field">
+                    <label for="series">串聯數 (S)</label>
+                    <input type="number" id="series" value="6" min="1" max="100" style="width: 100px;">
+                </div>
+                <div class="field">
+                    <label for="parallel">並聯數 (P)</label>
+                    <input type="number" id="parallel" value="4" min="1" max="100" style="width: 100px;">
+                </div>
             </div>
-            <div class="field">
-                <label for="parallel">並聯數 (P)</label>
-                <input type="number" id="parallel" value="4" min="1" max="100" style="width: 100px;">
-            </div>
-            <div class="field" style="margin-left: 20px;">
+            <div class="field field-offset">
                 <label>輸入欄位映射順序（勾選並依序排列）</label>
                 <div class="checkbox-group" style="margin-top: 8px;">
                     <label class="checkbox-label"><input type="checkbox" id="chk_mah" checked> 電容量 (mAh)</label>
@@ -343,14 +355,13 @@
     <!-- 步驟 2: 批次貼上資料 -->
     <div class="card">
         <h2>2. 批次輸入數據</h2>
-        <div class="row" style="justify-content: space-between; margin-bottom: 8px;">
-            <p class="hint">每行代表一顆電芯，欄位順序依上方勾選；<strong>換行 = 下一顆電芯</strong>。</p>
-            <span class="counter" id="counter">已解析 <strong id="parsed_count">0</strong> / <strong id="target_cells_count">24</strong> 筆</span>
-        </div>
+        <p class="hint">
+            每行代表一顆電芯，欄位順序依上方勾選；<strong>換行 = 下一顆電芯</strong>。目標筆數: <strong id="target_cells_count" class="count">24</strong> 筆（已解析 <strong id="parsed_count" class="count">0</strong> 筆）
+        </p>
         <textarea id="raw_data" placeholder="2500 9250 15&#10;2510 9280 14&#10;..."></textarea>
-        <div class="hint" style="margin-top: 10px;">
-            欄位分隔符號可任選或混用：<code>空白</code> <code>,</code> <code>;</code> <code>|</code> <code>-</code> <code>/</code> <code>_</code> <code>:</code> <code>.</code><br>
-            <label class="checkbox-label" style="margin-top: 6px;"><input type="checkbox" id="chk_decimal"> 小數點保留為小數值（勾選後 <code>.</code> 不再是分隔符號，可輸入 15.5 這類內阻）</label>
+        <div class="hint" style="margin-top: 8px;">
+            欄位分隔符號可任選或混用：<span class="mono">空白 , ; | : - / _ .</span>（全形 <span class="mono">，；：</span> 與 <span class="mono">– —</span> 亦可）<br>
+            <label class="checkbox-label" style="margin-top: 6px;"><input type="checkbox" id="chk_decimal"> 小數點保留為小數值（內阻可輸入 15.5 這類小數）</label>
         </div>
         <div class="row" style="justify-content: space-between; margin-top: 12px;">
             <div class="btn-group">
@@ -653,7 +664,6 @@
     const decimalEl = document.getElementById('chk_decimal');
     const targetLabel = document.getElementById('target_cells_count');
     const parsedLabel = document.getElementById('parsed_count');
-    const counterEl = document.getElementById('counter');
     const statusMsg = document.getElementById('status_msg');
     const MAX_ITERATIONS = 30000;
 
@@ -686,7 +696,7 @@
 
         const parsed = countParsedLines(rawDataEl.value, decimalEl.checked);
         parsedLabel.innerText = parsed.toString();
-        counterEl.className = parsed >= requiredCount && requiredCount > 0 ? 'counter ready' : 'counter';
+        parsedLabel.className = (requiredCount > 0 && parsed >= requiredCount) ? 'count ready' : 'count';
     }
 
     inS.addEventListener('input', updateTarget);
